@@ -122,7 +122,7 @@ class Board:
         b = []
         for i in range(size):
              for j in range(size):
-                b.extend(self.board[(size - j - 1) * size + i]  )
+                b.append(self.board[(size - j - 1) * size + i]  )
         self.board = b
         return self
 
