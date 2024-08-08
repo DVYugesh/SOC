@@ -1,7 +1,7 @@
 from game import Board
 from main import load_agent
 from pathlib import Path
-ngame, agent = load_agent(Path('tmp/nTupleNewrok_115697games.pkl'))
+ngame, agent = load_agent(Path('nTupleNewrok_115697games.pkl'))
 
 import time
 from IPython.display import display, clear_output
