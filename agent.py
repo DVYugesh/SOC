@@ -28,6 +28,17 @@ class nTupleNewrok:
             k *= (self.TARGET_PO2+1)
         return n
 
+    def clamp(self,value, min_value, max_value):
+        return max(min_value, min(value, max_value))
+
+    def update_LUT(self, board, delta):
+        """Update the LUTs based on the delta value with clamping."""
+        for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
+            tiles = [board[i] for i in tp]
+            tpid = self.tuple_id(tiles)
+            LUT[tpid] = self.clamp(LUT[tpid] + delta, 0, 1e36)  # Adjust max_value as needed
+
+ 
     def V(self, board, delta=None, debug=False):
         """Return the expected total future rewards of the board.
         Updates the LUTs if a delta is given and return the updated value.
@@ -36,6 +47,7 @@ class nTupleNewrok:
             print(f"V({board})")
         vals = []
         for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
+            
             tiles = [board[i] for i in tp]
             tpid = self.tuple_id(tiles)
             if delta is not None:
@@ -51,7 +63,7 @@ class nTupleNewrok:
         b = Board(s)
         try:
             r=b.act(a)
-            s_after=b.copyboard
+            s_after=b.copyboard()
         except IllegalAction:
             return 0
         return r + self.V(s_after)
@@ -71,7 +83,6 @@ class nTupleNewrok:
         """Learn from a transition experience by updating the belief
         on the after state (s_after) towards the sum of the next transition rewards (r_next) and
         the belief on the next after state (s_after_next).
-
         """
         a_next = self.best_action(s_next)
         b = Board(s_next)
@@ -82,20 +93,20 @@ class nTupleNewrok:
         except IllegalAction:
             r_next = 0
             v_after_next = 0
+            s_after_next = None
 
-        delta = r_next + v_after_next - self.V(s_after)
+        v_s_after = self.V(s_after)
+        delta = r_next + v_after_next - v_s_after
 
         if debug:
             print("s_next")
             Board(s_next).display()
             print("a_next", action_name(a_next), "r_next", r_next)
             print("s_after_next")
-            Board(s_after_next).display()
+            if s_after_next is not None:
+                Board(s_after_next).display()
             self.V(s_after_next, debug=True)
-            print(
-                f"delta ({delta:.2f}) = r_next ({r_next:.2f}) + v_after_next ({v_after_next:.2f}) - V(s_after) ({V(s_after):.2f})"
-            )
-            print(
-                f"V(s_after) <- V(s_after) ({V(s_after):.2f}) + alpha * delta ({alpha} * {delta:.1f})"
-            )
-        self.V(s_after, alpha * delta)
+            print(f"delta ({delta:.2f}) = r_next ({r_next:.2f}) + v_after_next ({v_after_next:.2f}) - V(s_after) ({v_s_after:.2f})")
+            print(f"V(s_after) <- V(s_after) ({v_s_after:.2f}) + alpha * delta ({alpha} * {delta:.1f})")
+
+        self.update_LUT(s_after, alpha * delta)
